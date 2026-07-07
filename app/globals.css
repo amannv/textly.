@@ -81,6 +81,7 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
+  --bg-gradient: radial-gradient(125% 125% at 50% 10%, #f8fafc 40%, #c4ddff 100%);
 }
 
 .dark {
@@ -115,6 +116,7 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
+  --bg-gradient: radial-gradient(125% 125% at 50% 10%, #000000 40%, #0d1a36 100%);
 }
 
 @layer base {
@@ -123,6 +125,10 @@
   }
   body {
     @apply bg-background text-foreground;
+    background: radial-gradient(125% 125% at 50% 10%, #f8fafc 40%, #3a76f9 100%);
+  }
+  .dark body {
+    background: radial-gradient(125% 125% at 50% 10%, #000000 40%, #0d1a36 100%);
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
@@ -130,4 +136,19 @@
   html {
     @apply font-sans;
   }
+}
+
+@keyframes slide-down-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down-fade {
+  animation: slide-down-fade 0.5s ease-out forwards;
 }
