@@ -62,7 +62,6 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [isTyping]);
 
-
   const handleCorrectGrammar = async () => {
     try {
       if (textRef.current?.value === "") {
@@ -152,7 +151,7 @@ export default function Dashboard() {
           {result && (
             <div
               ref={resultRef}
-              className="animate-slide-down-fade min-h-30 w-full rounded-md border border-input bg-input/10 px-2 py-2 text-sm text-foreground md:text-xs/relaxed dark:bg-input/30 scrollbar-none whitespace-pre-wrap mb-20"
+              className="animate-slide-down-fade min-h-30 w-full rounded-md border border-border/60 bg-white/70 backdrop-blur-sm px-2 py-2 text-sm text-foreground md:text-xs/relaxed dark:border-input dark:bg-input/30 dark:backdrop-blur-none scrollbar-none whitespace-pre-wrap mb-20"
             >
               {displayedText}
               {isTyping && (
@@ -162,6 +161,9 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      <footer className="fixed bottom-4 left-0 right-0 text-center text-sm tracking-wide text-foreground/80 dark:text-foreground/40 font-light">
+        made by aman with <span className="text-primary">♥</span>
+      </footer>
     </>
   );
 }
