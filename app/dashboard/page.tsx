@@ -1,4 +1,5 @@
 "use client";
+import { Copy, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const [displayedText, setDisplayedText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
+  const [copy, setCopy] = useState(false);
   const fullTextRef = useRef<string>("");
 
   const startTypewriter = useCallback((text: string) => {
@@ -56,6 +58,7 @@ export default function Dashboard() {
         clearInterval(interval);
         setIsTyping(false);
         setLoading(false);
+        setCopy(true);
       }
     }, 20);
 
@@ -107,6 +110,27 @@ export default function Dashboard() {
     }
   };
 
+  const copyResult = () => {
+    try {
+      if (!fullTextRef.current) return;
+      navigator.clipboard.writeText(fullTextRef.current);
+    } catch (e) {
+      console.error("Error while copying result!");
+    }
+  };
+
+  const clearInput = () => {
+    setTone(null);
+    setLength(null);
+    setType(null);
+    setResult(null);
+    setDisplayedText("");
+    setIsTyping(false);
+    setLoading(false);
+    setCopy(false);
+    fullTextRef.current = "";
+  }
+
   return (
     <>
       <Navbar />
@@ -121,10 +145,26 @@ export default function Dashboard() {
           </h1>
         </div>
         <div className="w-full flex flex-col gap-4">
-          <Textarea
-            ref={textRef}
-            placeholder="Paste your email, blog, social media caption, essay, or any text..."
-          />
+          <div className="relative">
+            <Textarea
+              ref={textRef}
+              maxLength={5000}
+              className="pr-10"
+              placeholder="Paste your email, blog, social media caption, essay, or any text..."
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                if (textRef.current) textRef.current.value = "";
+                clearInput();
+              }}
+              title="Clear input"
+              className="absolute top-2 right-2 h-7 w-7 transition-all duration-200 active:scale-90 cursor-pointer"
+            >
+              <X size={14} />
+            </Button>
+          </div>
           <div className="flex items-center justify-center w-full gap-2">
             <TypeSelector value={type} setValue={setType} />
             <ToneSelector value={tone} setValue={setTone} />
@@ -151,8 +191,33 @@ export default function Dashboard() {
           {result && (
             <div
               ref={resultRef}
-              className="animate-slide-down-fade min-h-30 w-full rounded-md border border-border/60 bg-white/70 backdrop-blur-sm px-2 py-2 text-sm text-foreground md:text-xs/relaxed dark:border-input dark:bg-input/30 dark:backdrop-blur-none scrollbar-none whitespace-pre-wrap mb-20"
+              className="relative animate-slide-down-fade min-h-30 w-full rounded-md border border-border/60 bg-white/70 backdrop-blur-sm px-2 py-2 pr-10 text-sm text-foreground md:text-xs/relaxed dark:border-input dark:bg-input/30 dark:backdrop-blur-none scrollbar-none whitespace-pre-wrap mb-20"
             >
+              {copy && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    copyResult();
+                    setCopy(false);
+                    setTimeout(() => setCopy(true), 2000);
+                  }}
+                  title="Copy to clipboard"
+                  className="absolute top-2 right-2 h-7 w-7 transition-all duration-200 active:scale-90 cursor-pointer"
+                >
+                  <Copy size={14} />
+                </Button>
+              )}
+              {!copy && !isTyping && result && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled
+                  className="absolute top-2 right-2 h-7 w-7 text-primary"
+                >
+                  <Check size={14} />
+                </Button>
+              )}
               {displayedText}
               {isTyping && (
                 <span className="inline-block w-0.5 h-4 bg-foreground ml-0.5 animate-pulse align-text-bottom" />
