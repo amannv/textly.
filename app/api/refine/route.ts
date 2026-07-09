@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { refineText } from "@/app/services/aiService";
+import { rateLimit } from "@/app/utils/rateLimit";
 
 export async function POST(req: NextRequest) {
+  const limited = rateLimit(req, 5, 60000);
+
+  if (limited) {
+    return limited;
+  }
+
   try {
     const { prompt } = await req.json();
 
@@ -9,7 +16,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ text });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json("Error occured while refining text");
+    return NextResponse.json(
+      { message: "Error while refining text." },
+      { status: 500 },
+    );
   }
 }

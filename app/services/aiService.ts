@@ -1,6 +1,6 @@
 import Groq from "groq-sdk";
 
-const groq = new Groq({apiKey: process.env.GROQ_API_KEY});
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export const refineText = async (prompt: string) => {
   try {
@@ -16,10 +16,8 @@ export const refineText = async (prompt: string) => {
       });
     };
     const completion = await getGroqChatCompletion();
-  return (completion.choices[0]?.message?.content || "");
+    return completion.choices[0]?.message?.content || "";
   } catch (e) {
-    console.error("Erro while refining text!", e);
+    console.error("Error while refining text!", e);
   }
 };
-
-

@@ -10,19 +10,19 @@ import LengthSelector from "@/components/LengthSelector";
 import { grammarPrompt, refinePrompt } from "../utils/prompt";
 import { useRef, useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const [tone, setTone] = useState<string | null>(null);
   const [length, setLength] = useState<string | null>(null);
   const [type, setType] = useState<string | null>(null);
-  const textRef = useRef<HTMLTextAreaElement>(null);
-
   const [result, setResult] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [displayedText, setDisplayedText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const resultRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(false);
   const [copy, setCopy] = useState(false);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
   const fullTextRef = useRef<string>("");
 
   const startTypewriter = useCallback((text: string) => {
@@ -34,13 +34,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isTyping) return;
-    setLoading(true);
 
     let charIndex = 0;
     const fullText = fullTextRef.current;
 
     if (!fullText) {
-      console.error("Error while refining text!");
+      toast.error("No text found!");
+      setLoading(false);
+      return;
     }
 
     const interval = setInterval(() => {
@@ -48,9 +49,9 @@ export default function Dashboard() {
       setDisplayedText(fullText.slice(0, charIndex));
 
       if (charIndex % 5 === 0) {
-        window.scrollTo({
-          top: document.body.scrollHeight,
+        resultRef.current?.scrollIntoView({
           behavior: "smooth",
+          block: "end",
         });
       }
 
@@ -65,48 +66,57 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [isTyping]);
 
-  const handleCorrectGrammar = async () => {
+  const refineText = async (promptType: "grammar" | "refine") => {
     try {
-      if (textRef.current?.value === "") {
-        console.error("Paste some text to refine");
+      if (loading) return;
+
+      setResult(null);
+      setDisplayedText("");
+      setCopy(false);
+
+      const input = textRef.current?.value ?? "";
+
+      if (!input.trim()) {
+        toast.info(
+          promptType === "grammar"
+            ? "Paste some text for grammar correction."
+            : "Paste some text for refining.",
+        );
         return;
       }
 
+      const prompt =
+        promptType === "grammar"
+          ? grammarPrompt({
+              text: input,
+            })
+          : refinePrompt({
+              text: input,
+              tone: tone,
+              postType: type,
+              length: length,
+            });
+
       setLoading(true);
-      const prompt = grammarPrompt({
-        text: textRef.current?.value || "",
-      });
-      const response = await axios.post("/api/refine", {
+
+      const response = await axios.post<{ text: string }>("/api/refine", {
         prompt,
       });
-      const data = response.data as { text: string };
-      startTypewriter(data.text);
-    } catch (e) {
-      console.error("Error while correcting grammar!");
-    }
-  };
-
-  const handleRefineText = async () => {
-    try {
-      if (textRef.current?.value === "") {
-        console.error("Paste some text to refine");
-        return;
+      startTypewriter(response.data.text);
+    } catch (error) {
+      setLoading(false);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 429) {
+          toast.error("Free plan limit reached.", {
+            description:
+              "You can refine up to 5 texts per minute. Please wait a moment before trying again.",
+          });
+        } else {
+          toast.error("Something went wrong!");
+        }
+      } else {
+        toast.error("Unexpected error!");
       }
-
-      setLoading(true);
-      const prompt = refinePrompt({
-        text: textRef.current?.value || "",
-        tone: tone,
-        postType: type,
-        length: length,
-      });
-      const response = await axios.post("/api/refine", {
-        prompt,
-      });
-      const data = response.data as { text: string };
-      startTypewriter(data.text);
-    } catch (e) {
-      console.error("Error while refining text!");
     }
   };
 
@@ -114,8 +124,9 @@ export default function Dashboard() {
     try {
       if (!fullTextRef.current) return;
       navigator.clipboard.writeText(fullTextRef.current);
+      toast.success("Text Copied!");
     } catch (e) {
-      console.error("Error while copying result!");
+      toast.error("Error while copying text!");
     }
   };
 
@@ -129,7 +140,11 @@ export default function Dashboard() {
     setLoading(false);
     setCopy(false);
     fullTextRef.current = "";
-  }
+    if (textRef.current) {
+      textRef.current.value = "";
+      textRef.current.focus();
+    }
+  };
 
   return (
     <>
@@ -147,18 +162,21 @@ export default function Dashboard() {
         <div className="w-full flex flex-col gap-4">
           <div className="relative">
             <Textarea
+              disabled={loading}
               ref={textRef}
               maxLength={5000}
+              onChange={(e) => {
+                if (e.target.value.length === 5000) {
+                  toast.warning("Maximum 5000 characters allowed.");
+                }
+              }}
               className="pr-10"
               placeholder="Paste your email, blog, social media caption, essay, or any text..."
             />
             <Button
               variant="outline"
               size="icon"
-              onClick={() => {
-                if (textRef.current) textRef.current.value = "";
-                clearInput();
-              }}
+              onClick={clearInput}
               title="Clear input"
               className="absolute top-2 right-2 h-7 w-7 transition-all duration-200 active:scale-90 cursor-pointer"
             >
@@ -171,7 +189,7 @@ export default function Dashboard() {
             <LengthSelector value={length} setValue={setLength} />
             <Button
               disabled={loading}
-              onClick={handleCorrectGrammar}
+              onClick={() => refineText("grammar")}
               variant={"default"}
               size={"lg"}
               className="min-w-35"
@@ -180,7 +198,7 @@ export default function Dashboard() {
             </Button>
             <Button
               disabled={loading}
-              onClick={handleRefineText}
+              onClick={() => refineText("refine")}
               variant={"default"}
               size={"lg"}
               className="min-w-20"
