@@ -7,7 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import ToneSelector from "@/components/ToneSelector";
 import TypeSelector from "@/components/TypeSelector";
 import LengthSelector from "@/components/LengthSelector";
-import { grammarPrompt, refinePrompt } from "../utils/prompt";
+import { grammarPrompt, refinePrompt } from "../app/utils/prompt";
 import { useRef, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(false);
   const [copy, setCopy] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const fullTextRef = useRef<string>("");
@@ -49,9 +50,9 @@ export default function Dashboard() {
       setDisplayedText(fullText.slice(0, charIndex));
 
       if (charIndex % 5 === 0) {
-        resultRef.current?.scrollIntoView({
+        window.scrollTo({
+          top: document.body.scrollHeight,
           behavior: "smooth",
-          block: "end",
         });
       }
 
@@ -121,28 +122,33 @@ export default function Dashboard() {
   };
 
   const copyResult = () => {
-    try {
-      if (!fullTextRef.current) return;
-      navigator.clipboard.writeText(fullTextRef.current);
-      toast.success("Text Copied!");
-    } catch (e) {
-      toast.error("Error while copying text!");
-    }
+    if (!fullTextRef.current) return;
+    navigator.clipboard.writeText(fullTextRef.current);
+    toast.success("Text Copied!");
   };
 
   const clearInput = () => {
     setTone(null);
     setLength(null);
     setType(null);
-    setResult(null);
-    setDisplayedText("");
     setIsTyping(false);
     setLoading(false);
     setCopy(false);
-    fullTextRef.current = "";
     if (textRef.current) {
       textRef.current.value = "";
       textRef.current.focus();
+    }
+    if (result) {
+      setIsClearing(true);
+      setTimeout(() => {
+        setIsClearing(false);
+        setResult(null);
+        setDisplayedText("");
+        fullTextRef.current = "";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 500);
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -206,12 +212,12 @@ export default function Dashboard() {
               {loading ? <Spinner /> : "Refine"}
             </Button>
           </div>
-          {result && (
+          {(result || isClearing) && (
             <div
               ref={resultRef}
-              className="relative animate-slide-down-fade min-h-30 w-full rounded-md border border-border/60 bg-white/70 backdrop-blur-sm px-2 py-2 pr-10 text-sm text-foreground md:text-xs/relaxed dark:border-input dark:bg-input/30 dark:backdrop-blur-none scrollbar-none whitespace-pre-wrap mb-20"
+              className={`relative min-h-30 w-full rounded-md border border-border/60 bg-white/70 backdrop-blur-sm px-2 py-2 pr-10 text-sm text-foreground md:text-xs/relaxed dark:border-input dark:bg-input/30 dark:backdrop-blur-none scrollbar-none whitespace-pre-wrap mb-20 ${isClearing ? "animate-slide-up-fade" : "animate-slide-down-fade"}`}
             >
-              {copy && (
+              {copy && !isClearing && (
                 <Button
                   variant="outline"
                   size="icon"
@@ -226,7 +232,7 @@ export default function Dashboard() {
                   <Copy size={14} />
                 </Button>
               )}
-              {!copy && !isTyping && result && (
+              {!copy && !isTyping && !isClearing && result && (
                 <Button
                   variant="outline"
                   size="icon"
